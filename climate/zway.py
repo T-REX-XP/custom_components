@@ -1,7 +1,9 @@
 """
 Support for Zway z-wave thermostats.
-http://192.168.1.51:8083/ZAutomation/api/v1/devices/ZWayVDev_zway_4-0-67-1/command/exact?level=17
-http://192.168.1.51:8083/ZAutomation/api/v1/devices/ZWayVDev_zway_4-0-128-1/command/
+http://IP:8083/ZWaveAPI/Run/devices[4].instances[0].commandClasses[67].data[1].modeName (get mode)
+
+http://IP:8083/ZAutomation/api/v1/devices/ZWayVDev_zway_4-0-67-1/command/exact?level=17  (set temperature)
+http://IP:8083/ZAutomation/api/v1/devices/ZWayVDev_zway_4-0-128-1/command/  (get battery state)
 
 configuration.yaml
 
@@ -13,6 +15,7 @@ climate:
     login: admin
     password: admin
     scan_interval: 10
+    node_id: 4
 """
 import logging
 import json
