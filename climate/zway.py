@@ -1,9 +1,9 @@
 """
 Support for Zway z-wave thermostats.
 http://IP:8083/ZWaveAPI/Run/devices[4].instances[0].commandClasses[67].data[1].modeName (get mode)
-
-http://IP:8083/ZAutomation/api/v1/devices/ZWayVDev_zway_4-0-67-1/command/exact?level=17  (set temperature)
-http://IP:8083/ZAutomation/api/v1/devices/ZWayVDev_zway_4-0-128-1/command/  (get battery state)
+http://IP:8083/ZWaveAPI/Run/devices[4].instances[0].commandClasses[67].data[1].val.value (get temperature)
+http://IP:8083/ZWaveAPI/Run/devices[4].instances[0].commandClasses[67].data[1].setVal=17  (set temperature)
+http://IP:8083/ZWaveAPI/Run/devices[4].instances[0].commandClasses[128].data.last.value  (get battery state)
 
 configuration.yaml
 
@@ -151,6 +151,7 @@ class ZwayClimate(ClimateDevice):
         self._data = self.do_api_request(
             self._host+'/ZWaveAPI/Run/devices['+self._node+'].instances[0].commandClasses')
         self._current_setpoint = float(self._data['67.data.setVal.value'])
+        self._current_mode = float(self._data['67.data.modeName.value'])
         self._battery = int(self._data['128.data.last.value'])
         self._schedule_type = int(self._data['70.overrideType.value'])
         self._schedule_state = int(self._data['70.overrideState.value'])
@@ -171,7 +172,6 @@ class ZwayClimate(ClimateDevice):
         """Return the device specific state attributes."""
         return {
             ATTR_MODE: self._current_state
-            ATTR_MODE: self._battery
         }
 
     @property
@@ -203,17 +203,6 @@ class ZwayClimate(ClimateDevice):
         """List of available operation modes."""
         return self._operation_list
 
-    def set_operation_mode(self, operation_mode):
-        """Set HVAC mode (comfort, home, sleep, away, holiday)."""
-        if operation_mode == "Heating":
-            override_type = 0,
-            override_state = 127
-        elif operation_mode == "Energy Saving":
-            override_type = 1,
-            override_state = 122
-        elif operation_mode == "Frost Protection":
-            override_type = 1,
-            override_state = 121
 """commandClasses 70, 
         override_type:
             0 - no override
@@ -223,11 +212,28 @@ class ZwayClimate(ClimateDevice):
             127 - unused
             122 - energy saving
             121 - frost protection
-    http://192.168.1.51:8083/ZWaveAPI/Run/devices[4].instances[0].commandClasses[70].data.overrideType=1
-"""
-        self._override_type = self.do_api_request(self._host+'/ZWaveAPI/Run/devices['+str(nodeid)+'].instances[0].commandClasses[70].data.overrideType='+str(override_type))
+
+http://IP:8083/ZWaveAPI/Run/devices[4].instances[0].commandClasses[70].data.overrideType=1
+http://IP:8083/ZWaveAPI/Run/devices[4].instances[0].commandClasses[67].data[1].modeName
 
         self._override_state = self.do_api_request(self._host+'/ZWaveAPI/Run/devices['+str(nodeid)+'].instances[0].commandClasses[70].data.overrideState='+str(override_state)))
+        self._override_type = self.do_api_request(self._host+'/ZWaveAPI/Run/devices['+str(nodeid)+'].instances[0].commandClasses[70].data.overrideType='+str(override_type))
+"""
+
+    def set_operation_mode(self, operation_mode):
+        """Set HVAC mode (heating)."""
+        if operation_mode == "Heating":
+            override_type = 0,
+            override_state = 127
+        elif operation_mode == "Energy Saving":
+            override_type = 1,
+            override_state = 122
+        elif operation_mode == "Frost Protection":
+            override_type = 1,
+            override_state = 121
+
+        self._operation_mode = self.do_api_request(
+            self._host+'/ZWaveAPI/Run/devices['+str(nodeid)+'].instances[0].commandClasses[67].data[1].modeName.value=1')
         _LOGGER.debug("Set operation mode=%s(%s, %s)", str(operation_mode), 
                       str(override_type), 
                       str(override_state))
