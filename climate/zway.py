@@ -131,20 +131,6 @@ class ZwayClimate(ClimateDevice):
         except ValueError as ex:
             _LOGGER.error('Unable to update from sensor: %s', ex)    
 
-    @staticmethod
-    def do_api_request(url):
-        """Does an API request."""
-        req = requests.get(url, timeout=DEFAULT_TIMEOUT)
-        if req.status_code != requests.codes.ok:
-            _LOGGER.exception("Error doing API request")
-        else:
-            _LOGGER.debug("API request ok %d", req.status_code)
-
-        """Fixes invalid JSON output by TOON"""
-        reqinvalid = req.text
-        reqvalid = reqinvalid.replace('",}', '"}')
-
-        return json.loads(req.text)
 
     @property
     def should_poll(self):
@@ -154,9 +140,9 @@ class ZwayClimate(ClimateDevice):
 
     def update(self):
         """Update the data from the thermostat."""
-        self._data = self.do_api_request(
-            self._host+'/ZAutomation/api/v1/devices/ZWayVDev_zway_'+self._node+'-0-67-1')
-        self._current_setpoint = float(self._data['data.metrics.level'])
+        self._data = requests.get(self._host + '/ZAutomation/api/v1/devices/ZWayVDev_zway_' + self._node + '-0-67-1', timeout=DEFAULT_TIMEOUT)
+        self._json = json.dumps(self._data)
+        self._current_setpoint = float(self._json(['data']['metrics'][['level'])
         _LOGGER.debug("Update called")
 
     @property
@@ -197,7 +183,5 @@ class ZwayClimate(ClimateDevice):
         if temperature is None:
             return
         else:
-            self._data = self.do_api_request(
-                self._host,
-                '/ZAutomation/api/v1/devices/ZWayVDev_zway_'+str(node)+'-0-67-1/command/exact?level='+str(temperature))
+            self._data = requests.get(self._host + '/ZAutomation/api/v1/devices/ZWayVDev_zway_' + str(node) + '-0-67-1/command/exact?level=' + str(temperature), timeout=DEFAULT_TIMEOUT))
             _LOGGER.debug("Set temperature=%s", str(temperature))
