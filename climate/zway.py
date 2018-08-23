@@ -51,6 +51,8 @@ DEFAULT_MIN_TEMP = 4
 DEFAULT_MAX_TEMP = 40
 CONF_NODE = 'node'
 CONF_HOST = 'host'
+CONF_LOGIN = 'login'
+CONF_PASSWORD = 'password'
 CONF_AWAY_TEMP = 'away_temp'
 CONF_TARGET_TEMP = 'target_temp'
 CONF_TEMP_SENSOR = 'temp_sensor'
@@ -74,13 +76,29 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 def setup_platform(hass, config, async_add_devices, discovery_info=None):
     """Setup the Zway thermostat."""
     name = config.get(CONF_NAME)
-    ip_addr = config.get(CONF_HOST)
+    host = config.get(CONF_HOST)
     node = config.get(CONF_NODE)
+    login = config.get(CONF_LOGIN)
+    password = config.get(CONF_PASSWORD)
     min_temp = config.get(CONF_MIN_TEMP)
     max_temp = config.get(CONF_MAX_TEMP)
     target_temp = config.get(CONF_TARGET_TEMP)
     temp_sensor_entity_id = config.get(CONF_TEMP_SENSOR)
-    away_temp = config.get(CONF_AWAY_TEMP)
+
+    async_add_devices([
+        ZwayClimate(hass, name, host, node, login, password, min_temp, max_temp, target_temp, temp_sensor_entity_id)
+    ])
+
+    ATTR_VALUE = 'value'
+    DEFAULT_VALUE = True
+
+    def zway_set_health(call):
+        value = call.data.get(ATTR_VALUE, DEFAULT_VALUE)
+
+        zway_device.send_command(health_mode=bool(value))
+
+    hass.services.async_register(DOMAIN, 'zway_set_health', zway_set_health)
+
 
 class ZwayClimate(ClimateDevice):
     """Representation of a Zwave thermostat."""
@@ -97,10 +115,10 @@ class ZwayClimate(ClimateDevice):
         self._max_temp = max_temp
         self._target_temperature = target_temp
         self._target_temperature_step = 0.5
-        self._battery = battery
         self._unit_of_measurement = hass.config.units.temperature_unit
         self._current_temperature = None
         self._temp_sensor_entity_id = temp_sensor_entity_id
+        self.update()
          
         if temp_sensor_entity_id:
             async_track_state_change(
