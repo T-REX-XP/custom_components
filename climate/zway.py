@@ -27,12 +27,15 @@ climate:
 """
 import logging
 import json
+import asyncio
 import voluptuous as vol
 
 from homeassistant.components.climate import (ClimateDevice, PLATFORM_SCHEMA, SUPPORT_TARGET_TEMPERATURE)
-from homeassistant.const import (CONF_NAME, CONF_HOST,
-                                 TEMP_CELSIUS, ATTR_TEMPERATURE)
+from homeassistant.const import (CONF_NAME, CONF_HOST, TEMP_CELSIUS, ATTR_UNIT_OF_MEASUREMENT, ATTR_TEMPERATURE,  CONF_TIMEOUT, CONF_CUSTOMIZE)
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.event import (async_track_state_change)
+from homeassistant.core import callback
+from homeassistant.helpers.restore_state import async_get_last_state
 
 import requests
 
@@ -41,8 +44,8 @@ SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE
 _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_NAME = 'Zway Thermostat'
-DEFAULT_TIMEOUT = 5
-DEFAULT_AWAY_TEMP = 16
+DEFAULT_TIMEOUT = 10
+DEFAULT_AWAY_TEMP = 15
 DEFAULT_TARGET_TEMP = 21
 DEFAULT_MIN_TEMP = 4
 DEFAULT_MAX_TEMP = 40
@@ -56,7 +59,6 @@ CONF_MAX_TEMP = 'max_temp'
 ATTR_MODE = 'mode'
 STATE_OFF = 'off'
 STATE_HEAT = 'heat'
-BASE_URL = 'http://{0}:{1}{2}{3}{4}'
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
@@ -141,8 +143,8 @@ class ZwayClimate(ClimateDevice):
     def update(self):
         """Update the data from the thermostat."""
         self._data = requests.get(self._host + '/ZAutomation/api/v1/devices/ZWayVDev_zway_' + self._node + '-0-67-1', timeout=DEFAULT_TIMEOUT)
-        self._json = json.dumps(self._data)
-        self._current_setpoint = float(self._json(['data']['metrics'][['level'])
+        self._json = json.loads(self._data)
+        self._current_setpoint = float(self._json['data']['metrics']['level'])
         _LOGGER.debug("Update called")
 
     @property
@@ -183,5 +185,5 @@ class ZwayClimate(ClimateDevice):
         if temperature is None:
             return
         else:
-            self._data = requests.get(self._host + '/ZAutomation/api/v1/devices/ZWayVDev_zway_' + str(node) + '-0-67-1/command/exact?level=' + str(temperature), timeout=DEFAULT_TIMEOUT))
+            self._data = requests.get(self._host + '/ZAutomation/api/v1/devices/ZWayVDev_zway_' + str(self._node) + '-0-67-1/command/exact?level=' + str(self._target_temperature), timeout=DEFAULT_TIMEOUT)
             _LOGGER.debug("Set temperature=%s", str(temperature))
