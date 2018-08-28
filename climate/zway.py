@@ -33,13 +33,13 @@ import voluptuous as vol
 from homeassistant.components.climate import (ClimateDevice, PLATFORM_SCHEMA, SUPPORT_TARGET_TEMPERATURE)
 from homeassistant.const import (CONF_NAME, CONF_HOST, TEMP_CELSIUS, ATTR_UNIT_OF_MEASUREMENT, ATTR_TEMPERATURE,  CONF_TIMEOUT, CONF_CUSTOMIZE)
 import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.event import (async_track_state_change)
+from homeassistant.helpers.event import async_track_state_change
 from homeassistant.core import callback
 from homeassistant.helpers.restore_state import async_get_last_state
 
 import requests
 
-SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE 
+SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE | SUPPORT_OPERATION_MODE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -105,6 +105,7 @@ class ZwayClimate(ClimateDevice):
         self._max_temp = max_temp
         self._target_temperature = target_temp
         self._target_temperature_step = 0.5
+        self._current_operation = 'off'
         self._unit_of_measurement = hass.config.units.temperature_unit
         self._current_temperature = None
         self._temp_sensor_entity_id = temp_sensor_entity_id
@@ -126,7 +127,15 @@ class ZwayClimate(ClimateDevice):
 
         self._async_update_current_temp(new_state)
         yield from self.async_update_ha_state()
-        
+
+    @staticmethod
+    def represents_float(s):
+        try:
+            float(s)
+            return True
+        except ValueError:
+            return False
+         
     @callback
     def _async_update_current_temp(self, state):
         """Update thermostat with latest state from sensor."""
@@ -149,7 +158,8 @@ class ZwayClimate(ClimateDevice):
 
     def update(self):
         """Update the data from the thermostat."""
-        self._data = requests.get(self._host + '/ZAutomation/api/v1/devices/ZWayVDev_zway_' + str(self._node) + '-0-67-1', timeout=DEFAULT_TIMEOUT)
+        self._post_data = '{"form":True, "login": ' + self._login + ', "password": ' + self._password + ', "keepme":False, "default_ui":1}'
+        self._data = requests.post(self._host + '/ZAutomation/api/v1/devices/ZWayVDev_zway_' + str(self._node) + '-0-67-1', timeout=DEFAULT_TIMEOUT, json=self._post_data)
         self._json = json.loads(self._data)
         self._current_setpoint = float(self._json['data']['metrics']['level'])
         _LOGGER.debug("Update called")
@@ -185,5 +195,6 @@ class ZwayClimate(ClimateDevice):
         if temperature is None:
             return
         else:
-            self._data = requests.get(self._host + '/ZAutomation/api/v1/devices/ZWayVDev_zway_' + str(self._node) + '-0-67-1/command/exact?level=' + str(self._target_temperature), timeout=DEFAULT_TIMEOUT)
+            self._post_data = '{"form":True, "login": ' + self._login + ', "password": ' + self._password + ', "keepme":False, "default_ui":1}'
+            self._data = requests.post(self._host + '/ZAutomation/api/v1/devices/ZWayVDev_zway_' + str(self._node) + '-0-67-1/command/exact?level=' + str(self._target_temperature), timeout=DEFAULT_TIMEOUT, json=self._post_data)
             _LOGGER.debug("Set temperature=%s", str(temperature))
