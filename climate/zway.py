@@ -64,7 +64,7 @@ STATE_HEAT = 'heat'
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-    vol.Optional(CONF_HOST, default='127.0.0.1:8083'): cv.string,
+    vol.Optional(CONF_HOST, default='http://127.0.0.1:8083'): cv.string,
     vol.Required(CONF_NODE): cv.positive_int,
     vol.Optional(CONF_MIN_TEMP, default=DEFAULT_MIN_TEMP): cv.positive_int,
     vol.Optional(CONF_MAX_TEMP, default=DEFAULT_MAX_TEMP): cv.positive_int,
@@ -89,16 +89,6 @@ def setup_platform(hass, config, async_add_devices, discovery_info=None):
         ZwayClimate(hass, name, host, node, login, password, min_temp, max_temp, target_temp, temp_sensor_entity_id)
     ])
 
-    ATTR_VALUE = 'value'
-    DEFAULT_VALUE = True
-
-    def zway_set_health(call):
-        value = call.data.get(ATTR_VALUE, DEFAULT_VALUE)
-
-        zway_device.send_command(health_mode=bool(value))
-
-    hass.services.async_register(DOMAIN, 'zway_set_health', zway_set_health)
-
 
 class ZwayClimate(ClimateDevice):
     """Representation of a Zwave thermostat."""
@@ -118,7 +108,6 @@ class ZwayClimate(ClimateDevice):
         self._unit_of_measurement = hass.config.units.temperature_unit
         self._current_temperature = None
         self._temp_sensor_entity_id = temp_sensor_entity_id
-        self.update()
          
         if temp_sensor_entity_id:
             async_track_state_change(
@@ -160,7 +149,7 @@ class ZwayClimate(ClimateDevice):
 
     def update(self):
         """Update the data from the thermostat."""
-        self._data = requests.get(self._host + '/ZAutomation/api/v1/devices/ZWayVDev_zway_' + self._node + '-0-67-1', timeout=DEFAULT_TIMEOUT)
+        self._data = requests.get(self._host + '/ZAutomation/api/v1/devices/ZWayVDev_zway_' + str(self._node) + '-0-67-1', timeout=DEFAULT_TIMEOUT)
         self._json = json.loads(self._data)
         self._current_setpoint = float(self._json['data']['metrics']['level'])
         _LOGGER.debug("Update called")
@@ -176,13 +165,6 @@ class ZwayClimate(ClimateDevice):
         return self._name
 
     @property
-    def device_state_attributes(self):
-        """Return the device specific state attributes."""
-        return {
-            ATTR_MODE: self._current_state
-        }
-
-    @property
     def temperature_unit(self):
         """Return the unit of measurement."""
         return TEMP_CELSIUS
@@ -190,12 +172,12 @@ class ZwayClimate(ClimateDevice):
     @property
     def current_temperature(self):
         """Return the current temperature."""
-        return self._current_temp
+        return self._current_temperature
 
     @property
     def target_temperature(self):
         """Return the temperature we try to reach."""
-        return self._current_setpoint
+        return self._target_temperature
 
     def set_temperature(self, **kwargs):
         """Set new target temperature."""
