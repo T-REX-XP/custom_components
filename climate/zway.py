@@ -103,7 +103,7 @@ def setup_platform(hass, config, async_add_devices, discovery_info=None):
 class ZwayClimate(ClimateDevice):
     """Representation of a Zwave thermostat."""
 
-    def __init__(self, hass, name, host, min_temp, max_temp, target_temp, temp_sensor_entity_id):
+    def __init__(self, hass, name, host, node, login, password, min_temp, max_temp, target_temp, temp_sensor_entity_id):
         """Initialize the thermostat."""
         self.hass = hass
         self._name = name
