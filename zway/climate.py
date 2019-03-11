@@ -38,12 +38,13 @@ import voluptuous as vol
 from homeassistant.core import callback
 from homeassistant.core import DOMAIN as HA_DOMAIN
 from homeassistant.components.climate import (
-    STATE_AUTO, STATE_HEAT, STATE_IDLE, STATE_AUTO, ClimateDevice,
-    ATTR_OPERATION_MODE, SUPPORT_OPERATION_MODE,
-    SUPPORT_TARGET_TEMPERATURE, PLATFORM_SCHEMA)
+    ClimateDevice, PLATFORM_SCHEMA)
+from homeassistant.components.climate.const import (
+    STATE_AUTO, STATE_HEAT, STATE_IDLE, STATE_AUTO, ATTR_OPERATION_MODE, SUPPORT_OPERATION_MODE,
+    SUPPORT_TARGET_TEMPERATURE)
 from homeassistant.const import (
-    STATE_ON, STATE_OFF, ATTR_TEMPERATURE, CONF_NAME, ATTR_ENTITY_ID,
-    CONF_HOST, STATE_UNKNOWN, PRECISION_HALVES)
+    STATE_ON, STATE_OFF, STATE_UNKNOWN, ATTR_TEMPERATURE, CONF_NAME, ATTR_ENTITY_ID,
+    CONF_HOST, PRECISION_HALVES)
 from homeassistant.helpers import condition
 from homeassistant.helpers.event import (
     async_track_state_change, async_track_time_interval)
@@ -67,6 +68,7 @@ CONF_SENSOR = 'target_sensor'
 CONF_MIN_TEMP = 'min_temp'
 CONF_MAX_TEMP = 'max_temp'
 CONF_TARGET_TEMP = 'target_temp'
+CONF_AWAY_TEMP = 'away_temp'
 CONF_INITIAL_OPERATION_MODE = 'initial_operation_mode'
 SUPPORT_FLAGS = (SUPPORT_TARGET_TEMPERATURE |
                  SUPPORT_OPERATION_MODE)
@@ -76,9 +78,12 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_NODE): cv.positive_int,
     vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
     vol.Optional(CONF_HOST, default='http://127.0.0.1:8083'): cv.string,
+    vol.Optional(CONF_LOGIN): cv.string,
+    vol.Optional(CONF_PASSWORD): cv.string,
     vol.Optional(CONF_MAX_TEMP): vol.Coerce(float),
     vol.Optional(CONF_MIN_TEMP): vol.Coerce(float),
     vol.Optional(CONF_TARGET_TEMP): vol.Coerce(float),
+    vol.Optional(CONF_AWAY_TEMP, default=DEFAULT_AWAY_TEMP): vol.Coerce(float),
     vol.Optional(CONF_INITIAL_OPERATION_MODE):
         vol.In([STATE_AUTO, STATE_OFF]),
 })
@@ -265,3 +270,4 @@ class ZwayThermostat(ClimateDevice, RestoreEntity):
     def supported_features(self):
         """Return the list of supported features."""
         return self._support_flags
+
