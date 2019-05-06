@@ -43,7 +43,7 @@ from homeassistant.components.climate.const import (
     STATE_AUTO, STATE_HEAT, STATE_IDLE, STATE_AUTO, ATTR_OPERATION_MODE, SUPPORT_OPERATION_MODE,
     SUPPORT_TARGET_TEMPERATURE)
 from homeassistant.const import (
-    STATE_ON, STATE_OFF, STATE_UNKNOWN, ATTR_TEMPERATURE, CONF_NAME, ATTR_ENTITY_ID,
+    ATTR_UNIT_OF_MEASUREMENT, STATE_ON, STATE_OFF, STATE_UNKNOWN, ATTR_TEMPERATURE, CONF_NAME, ATTR_ENTITY_ID,
     CONF_HOST, PRECISION_HALVES)
 from homeassistant.helpers import condition
 from homeassistant.helpers.event import (
@@ -169,6 +169,11 @@ class ZwayThermostat(ClimateDevice, RestoreEntity):
         return self._name
 
     @property
+    def temperature_unit(self):
+        """Return the unit of measurement."""
+        return self._unit
+
+    @property
     def precision(self):
         """Return the precision of the system."""
         return super().precision
@@ -255,11 +260,15 @@ class ZwayThermostat(ClimateDevice, RestoreEntity):
     @callback
     def _async_update_temp(self, state):
         """Update thermostat with latest state from sensor."""
-        try:
-            self._cur_temp = float(state.state)
-        except ValueError as ex:
-            _LOGGER.error("Unable to update from sensor: %s", ex)
+        unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
 
+        try:
+            self._cur_temp = self.hass.config.units.temperature(
+                float(state.state), unit)
+        except ValueError as ex:
+            _LOGGER.error('Unable to update from sensor: %s', ex)
+
+	
     def update(self):
            """Update the data from the thermostat."""
            self._data = requests.get(self._host + '/ZAutomation/api/v1/devices/ZWayVDev_zway_' + str(self._node) + '-0-67-1', timeout=DEFAULT_TIMEOUT)
